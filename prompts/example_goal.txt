@@ -1,0 +1,22 @@
+GOAL: Produce a literature survey on "Retrieval-Augmented Generation (RAG) for
+domain-specific applications" covering papers from 2023-2025.
+
+SCOPE:
+- Search Arxiv for relevant papers (minimum 15, maximum 40)
+- Read and extract key findings from the most relevant papers
+- Organize by sub-topics: medical RAG, legal RAG, code RAG, scientific RAG
+- Include a comparison of approaches
+
+OUTPUT: A markdown document at outputs/final.md with:
+- Executive summary (~500 words)
+- Per-topic sections with citations to arxiv_id
+- Comparison of approaches
+- Future directions section
+- Bibliography of papers cited
+
+CONSTRAINTS:
+- Prioritize papers cited frequently or from top venues if signals are available
+- Skip papers not in English
+- Time budget: as configured (default 12 hours)
+- Step budget: as configured (default 500 steps)
+- Cite every claim with the source identifier (arxiv_id or URL)

@@ -1,0 +1,42 @@
+# Configuration for the autonomous research agent
+
+llm:
+  # Ollama model to use. Options: qwen2.5:1.5b (recommended for 4GB), qwen2.5:3b
+  model: "qwen2.5:1.5b"
+  embed_model: "nomic-embed-text"  # Lightweight embedding model (~270MB)
+  host: "http://localhost:11434"
+  temperature_plan: 0.2
+  temperature_synth: 0.5
+  max_tokens: 2048
+  request_timeout: 300  # seconds
+
+agent:
+  max_steps: 500
+  max_hours: 16
+  checkpoint_every_n_steps: 10
+  reflect_every_n_steps: 20
+  max_tool_retries: 3
+
+tools:
+  web_search:
+    max_results: 8
+    rate_limit_seconds: 3
+  arxiv:
+    max_results: 20
+    sort_by: "relevance"  # or "lastUpdatedDate"
+  pdf_reader:
+    max_pages_per_pdf: 50
+    chunk_size: 500
+    chunk_overlap: 50
+    download_dir: "state/pdfs"
+  memory:
+    index_path: "state/faiss.index"
+    metadata_path: "state/metadata.json"
+    embedding_dim: 768  # nomic-embed-text dimension
+    top_k_default: 6
+
+paths:
+  state_dir: "state"
+  output_dir: "outputs"
+  log_file: "outputs/agent_log.jsonl"
+  final_output: "outputs/final.md"
