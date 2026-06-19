@@ -108,6 +108,31 @@ Edit `config.yaml` to tune:
 - Per-tool failure tracking; failing tools don't crash the loop
 - Output document is appended-to incrementally — partial progress is preserved
 
+## Running via Microsoft `agency` Copilot CLI (autopilot)
+
+If you want to drive long-horizon autonomous runs through the `agency` CLI instead of
+the local Ollama loop in `main.py`, use the launcher scripts:
+
+```bash
+# Linux / WSL
+./scripts/run_autopilot.sh prompts/example_goal.txt 300
+
+# Windows PowerShell
+.\scripts\run_autopilot.ps1 -PromptFile prompts\example_goal.txt -MaxContinues 300
+```
+
+Under the hood this runs:
+
+```
+agency copilot --autopilot --max-autopilot-continues <N> --model <M> -p "<prompt>"
+```
+
+Key flags:
+- `--autopilot` — no interactive prompts between turns
+- `--max-autopilot-continues` — bump high (200-500) for 8-16h sessions; default is 5
+- `--continue` — resume the most recent session if it died
+- `--available-tools` / `--deny-tool` — gate tools to avoid permission prompts blocking the loop
+
 ## License
 
 MIT
