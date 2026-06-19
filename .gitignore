@@ -23,10 +23,16 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Agent runtime state
+# Agent runtime state (never commit large/binary artifacts)
 state/
-outputs/
+cache/
+outputs/*
 !outputs/.gitkeep
+history/*
+!history/.gitkeep
+
+# Test artifacts
+.pytest_cache/
 
 # Local secrets
 .env

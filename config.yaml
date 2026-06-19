@@ -7,8 +7,14 @@ llm:
   host: "http://localhost:11434"
   temperature_plan: 0.2
   temperature_synth: 0.5
-  max_tokens: 2048
-  request_timeout: 300  # seconds
+  max_tokens: 1024  # Lowered from 2048 — Qwen on CPU is slow; smaller outputs = faster steps
+  request_timeout: 600  # seconds; CPU inference can be slow
+  keep_alive: "30m"  # keep model warm between calls — prevents 30s+ reloads
+
+cache:
+  enabled: true
+  dir: "cache"
+  ttl_seconds: 604800  # 7 days
 
 agent:
   max_steps: 500
@@ -17,26 +23,46 @@ agent:
   reflect_every_n_steps: 20
   max_tool_retries: 3
 
+monitor:
+  enabled: true
+  sample_interval: 30.0
+  ram_abort_pct: 95.0
+  thermal_abort_c: 95.0  # Abort if any thermal zone exceeds this (Celsius)
+
 tools:
   web_search:
     max_results: 8
     rate_limit_seconds: 3
   arxiv:
     max_results: 20
-    sort_by: "relevance"  # or "lastUpdatedDate"
+    sort_by: "relevance"
   pdf_reader:
-    max_pages_per_pdf: 50
+    max_pages: 50
     chunk_size: 500
     chunk_overlap: 50
     download_dir: "state/pdfs"
   memory:
     index_path: "state/faiss.index"
     metadata_path: "state/metadata.json"
-    embedding_dim: 768  # nomic-embed-text dimension
+    embedding_dim: 768
     top_k_default: 6
+    hybrid_alpha: 0.6  # 1.0 = vector only, 0.0 = BM25 only
+  wikipedia:
+    lang: "en"
+    max_chars: 4000
+  web_fetch:
+    max_chars: 20000
+    timeout: 30
+  semantic_scholar:
+    max_results: 15
+    rate_limit_seconds: 3
 
 paths:
   state_dir: "state"
   output_dir: "outputs"
+  history_dir: "history"
+  skills_dir: "skills"
+  prompt_file: "prompt.md"
   log_file: "outputs/agent_log.jsonl"
   final_output: "outputs/final.md"
+  system_metrics_log: "outputs/system_metrics.jsonl"

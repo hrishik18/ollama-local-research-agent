@@ -55,16 +55,9 @@ class PdfReaderTool:
         return "\n".join(text_parts)
 
     def _chunk(self, text: str) -> list[str]:
-        words = text.split()
-        if len(words) <= self.chunk_size:
-            return [text]
-        chunks = []
-        step = self.chunk_size - self.chunk_overlap
-        for i in range(0, len(words), step):
-            chunks.append(" ".join(words[i : i + self.chunk_size]))
-            if i + self.chunk_size >= len(words):
-                break
-        return chunks
+        # Use the shared semantic chunker
+        from .chunker import chunk_text
+        return chunk_text(text, chunk_size=self.chunk_size, overlap=self.chunk_overlap)
 
     def run(self, url: str) -> dict[str, Any]:
         try:
