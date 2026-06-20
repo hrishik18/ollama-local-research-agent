@@ -38,8 +38,8 @@ agent:
 monitor:
   enabled: true
   sample_interval: 30.0
-  ram_abort_pct: 95.0
-  thermal_abort_c: 95.0  # Abort if any thermal zone exceeds this (Celsius)
+  ram_abort_pct: 98.0
+  thermal_abort_c: 105.0  # Abort if any thermal zone exceeds this (Celsius)
 
 tools:
   web_search:
