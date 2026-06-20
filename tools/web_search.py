@@ -6,7 +6,12 @@ import logging
 import time
 from typing import Any
 
-from duckduckgo_search import DDGS
+try:
+    # New package name (June 2025+): `ddgs`
+    from ddgs import DDGS
+except ImportError:  # pragma: no cover - fallback for older installs
+    # Old package name (<=8.x): `duckduckgo-search`
+    from duckduckgo_search import DDGS
 
 log = logging.getLogger(__name__)
 
