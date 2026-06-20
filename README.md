@@ -77,7 +77,8 @@ ollama pull nomic-embed-text
 git clone https://github.com/hsancheti_microsoft/ollama-local-research-agent.git
 cd ollama-local-research-agent
 python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.lock.txt   # pinned, reproducible (134 packages)
+#   or: pip install -r requirements.txt # loose >= constraints, latest versions
 
 # 4. Edit the goal
 $EDITOR prompt.md

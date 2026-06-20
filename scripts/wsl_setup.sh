@@ -19,7 +19,7 @@
 #   2. install Ollama (idempotent)
 #   3. pull qwen2.5:1.5b + nomic-embed-text (≈1.8 GB download)
 #   4. clone the repo if not already in it
-#   5. create venv + pip install -r requirements.txt
+#   5. create venv + pip install (prefers requirements.lock.txt over requirements.txt)
 #   6. run pytest tests/ to verify (no Ollama required for tests)
 #   7. print next steps
 
@@ -85,7 +85,15 @@ fi
 # shellcheck disable=SC1091
 source venv/bin/activate
 pip install --quiet --upgrade pip
-pip install --quiet -r requirements.txt
+# Prefer the pinned lockfile (reproducible: tested exact versions, ~134 deps).
+# Fall back to requirements.txt if the lockfile isn't present (older clones).
+if [[ -f requirements.lock.txt ]]; then
+  echo "  using requirements.lock.txt (pinned versions)"
+  pip install --quiet -r requirements.lock.txt
+else
+  echo "  using requirements.txt (loose >= constraints)"
+  pip install --quiet -r requirements.txt
+fi
 ok "venv ready"
 
 say "Running smoke tests (no Ollama needed for tests)"
