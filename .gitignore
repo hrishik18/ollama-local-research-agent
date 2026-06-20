@@ -41,3 +41,6 @@ history/*
 
 # Local MCP / tooling configs
 .mcp.json
+
+# agency Copilot CLI local state (machine-specific telemetry)
+agentconfig.json
