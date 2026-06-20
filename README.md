@@ -23,7 +23,7 @@ and system monitoring (RAM + thermals).
 - **Checkpoint & resume** - crashes don't lose progress
 - **Graceful shutdown** on SIGINT / SIGTERM / monitor abort
 - **Prompt compression (optional)** - [headroom-ai](https://github.com/chopratejas/headroom) cuts input tokens 50-90% on tool-output-heavy turns; big speedup on slow CPU inference
-- **Tested** - `pytest tests/` (37 tests, no Ollama required)
+- **Tested** - `pytest tests/` (47 tests, no Ollama required)
 
 ## Architecture
 
@@ -74,10 +74,10 @@ ollama pull qwen2.5:1.5b
 ollama pull nomic-embed-text
 
 # 3. Clone & install
-git clone https://github.com/hsancheti_microsoft/ollama-local-research-agent.git
+git clone https://github.com/hrishik18/ollama-local-research-agent.git
 cd ollama-local-research-agent
 python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.lock.txt   # pinned, reproducible (134 packages)
+pip install -r requirements.lock.txt   # ← pinned, reproducible (134 packages, recommended)
 #   or: pip install -r requirements.txt # loose >= constraints, latest versions
 
 # 4. Edit the goal
@@ -106,6 +106,53 @@ the target) that runs the same bootstrap remotely:
 ./scripts/azure_vm_setup.sh             # provision + bootstrap
 ./scripts/azure_vm_setup.sh --destroy   # tear down
 ```
+
+## Dependencies
+
+Two files control Python deps; pick based on whether you value reproducibility
+or freshness:
+
+| File | When to use | Pin style | Count |
+|---|---|---|---|
+| `requirements.lock.txt` | **Default / overnight runs** — same versions tested on the dev box | exact `==` pins on every transitive dep | 134 |
+| `requirements.txt` | Latest patches, fresh installs | loose `>=` constraints on direct deps only | 18 |
+
+```bash
+# Reproducible (recommended — exact same versions as CI):
+pip install -r requirements.lock.txt
+
+# Or loose / "latest compatible":
+pip install -r requirements.txt
+```
+
+The shipped `scripts/wsl_setup.sh` auto-prefers the lockfile when present and
+falls back to `requirements.txt` for older clones.
+
+### Regenerating the lockfile
+
+After you edit `requirements.txt` (add/remove/upgrade a direct dep):
+
+```bash
+pip install pip-tools
+pip-compile --strip-extras --output-file=requirements.lock.txt requirements.txt
+```
+
+`pip-compile` walks only your direct deps' transitive closure, so it never
+pollutes the lockfile with unrelated packages from your global env — unlike
+plain `pip freeze`.
+
+### Optional add-ons (not in the lockfile)
+
+These are kept out of the lock so the base install stays small on the 4 GB box:
+
+| Feature | Install |
+|---|---|
+| Phoenix tracing | `pip install arize-phoenix-otel openinference-instrumentation-ollama` |
+| Headroom prompt compression | `pip install "headroom-ai[all]"` |
+| Playwright browser tool | `pip install playwright && playwright install chromium` |
+
+Enable each via its respective `config.yaml` toggle (`tracing.enabled`,
+`compression.enabled`, `tools.browser.enabled`).
 
 ## Usage
 
@@ -320,7 +367,7 @@ pytest tests/ -v
 monitor, and config - all without needing Ollama. `tests/test_v03.py`,
 `test_v04.py`, `test_v05.py`, and `test_v06.py` add skills, benchmark-scoring,
 dashboard, headroom-compression, and browser-tool tests.
-**44 tests total, all pass without Ollama or Playwright installed.**
+**47 tests total, all pass without Ollama or Playwright installed.**
 
 ## License
 
