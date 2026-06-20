@@ -79,6 +79,11 @@ $EDITOR prompt.md
 
 # 5. Run the smoke tests (no Ollama needed)
 pytest tests/ -v
+
+# 6. (optional) Launch the traceability dashboard in another terminal
+chmod +x dashboard/run.sh
+./dashboard/run.sh                       # http://localhost:5050
+#   or: python scripts/seed_demo_history.py   # if you have no iterations yet
 ```
 
 ## Usage

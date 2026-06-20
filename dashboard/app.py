@@ -10,16 +10,22 @@ Adds full traceability:
 - Composite score chart with target bands
 
 Run with:
-    python dashboard/app.py
-    # open http://localhost:5050
+    python dashboard/app.py                            # http://localhost:5050
+    python dashboard/app.py --port 8000                # custom port
+    python dashboard/app.py --host 0.0.0.0 --port 5050 # expose on LAN
+    DASHBOARD_PORT=8080 python dashboard/app.py        # via env var
+
+Reads config.yaml `dashboard.host` / `dashboard.port` if present (CLI > env > config).
 """
 
 from __future__ import annotations
 
+import argparse
+import errno
 import json
+import os
 import re
 import sys
-from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -702,6 +708,47 @@ INDEX_HTML = r"""<!doctype html>
 
 
 if __name__ == "__main__":
-    port = 5050
-    print(f"Open http://localhost:{port}")
-    app.run(host="127.0.0.1", port=port, debug=False)
+    # Load defaults from config.yaml if present
+    cfg_host, cfg_port = "127.0.0.1", 5050
+    cfg_path = ROOT / "config.yaml"
+    if cfg_path.exists():
+        try:
+            import yaml
+            cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+            d = cfg.get("dashboard", {}) or {}
+            cfg_host = d.get("host", cfg_host)
+            cfg_port = int(d.get("port", cfg_port))
+        except Exception as e:
+            print(f"warning: could not read dashboard.* from config.yaml: {e}", file=sys.stderr)
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--host", default=os.environ.get("DASHBOARD_HOST", cfg_host),
+                    help="bind address (default 127.0.0.1; use 0.0.0.0 to expose on LAN)")
+    ap.add_argument("--port", type=int, default=int(os.environ.get("DASHBOARD_PORT", cfg_port)),
+                    help="port to listen on (default 5050)")
+    args = ap.parse_args()
+
+    # Friendly summary of what we'll show
+    n_iters = len(list(HISTORY_DIR.glob("iteration_*"))) if HISTORY_DIR.exists() else 0
+    has_metrics = (OUTPUTS_DIR / "system_metrics.jsonl").exists()
+    print("=" * 60)
+    print(f" Ollama Research Agent — Dashboard")
+    print(f" history/ iterations: {n_iters}{'  (seed with: python scripts/seed_demo_history.py)' if n_iters == 0 else ''}")
+    print(f" system metrics:      {'present' if has_metrics else 'none yet'}")
+    print(f" Open: http://{args.host if args.host != '0.0.0.0' else 'localhost'}:{args.port}")
+    print("=" * 60)
+
+    try:
+        app.run(host=args.host, port=args.port, debug=False)
+    except OSError as e:
+        if e.errno in (errno.EADDRINUSE, getattr(errno, "WSAEADDRINUSE", 10048)):
+            print(
+                f"\n✗ Port {args.port} is already in use.\n"
+                f"  Pick another: python dashboard/app.py --port 8080\n"
+                f"  Or find what is using it: (linux)  ss -ltnp | grep :{args.port}\n"
+                f"                            (mac)    lsof -i :{args.port}\n"
+                f"                            (windows) Get-NetTCPConnection -LocalPort {args.port}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        raise
