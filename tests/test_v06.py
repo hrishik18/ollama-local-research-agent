@@ -88,3 +88,48 @@ def test_screenshot_dir_is_created(tmp_path):
     sd = tmp_path / "shots_subdir"
     BrowserTool(enabled=False, screenshot_dir=str(sd))
     assert sd.exists() and sd.is_dir()
+
+
+# ---------- self-heal regression tests ----------
+
+def test_synthesizer_uses_config_temperature():
+    """v0.6 self-heal: tools.synthesizer.SynthesizerTool must honour the
+    `temperature` constructor arg (config.llm.temperature_synth was previously
+    silently ignored — hardcoded to 0.5)."""
+    from tools.synthesizer import SynthesizerTool
+
+    captured = {}
+
+    class _LLM:
+        def generate(self, prompt, system=None, temperature=None, **k):
+            captured["temperature"] = temperature
+            return "x"
+
+    class _Mem:
+        def search(self, q, top_k=8):
+            return [{"text": "t", "meta": {"source": "s1"}}]
+
+    t = SynthesizerTool(_LLM(), _Mem(), temperature=0.77)
+    t.run("topic")
+    assert captured["temperature"] == 0.77
+
+
+def test_main_module_has_no_utcnow_calls():
+    """v0.6 self-heal: every datetime.utcnow() use is gone (Py3.13 deprecated)."""
+    import re
+    src = (ROOT / "main.py").read_text(encoding="utf-8")
+    # Strip comments before grepping
+    no_comments = re.sub(r"#.*$", "", src, flags=re.M)
+    assert "datetime.utcnow" not in no_comments, "main.py still calls datetime.utcnow()"
+
+    src2 = (ROOT / "iterate.py").read_text(encoding="utf-8")
+    no_comments2 = re.sub(r"#.*$", "", src2, flags=re.M)
+    assert "datetime.utcnow" not in no_comments2, "iterate.py still calls datetime.utcnow()"
+
+
+def test_iterate_imports_build_compressor():
+    """v0.6 self-heal: iterate.py must build LLM with the same compressor wiring as main.py."""
+    src = (ROOT / "iterate.py").read_text(encoding="utf-8")
+    assert "build_compressor" in src
+    assert "compressor=compressor" in src
+

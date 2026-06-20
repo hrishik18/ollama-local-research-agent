@@ -31,9 +31,10 @@ class SynthesizerTool:
     name = "synthesizer"
     description = "Synthesize multiple memory chunks into a cohesive section on a topic."
 
-    def __init__(self, llm, memory) -> None:
+    def __init__(self, llm, memory, temperature: float = 0.5) -> None:
         self.llm = llm
         self.memory = memory
+        self.temperature = temperature
 
     def run(self, topic: str, top_k: int = 8, max_chars_per_chunk: int = 800) -> dict[str, Any]:
         chunks = self.memory.search(topic, top_k=top_k)
@@ -50,7 +51,7 @@ class SynthesizerTool:
         excerpts = "\n\n".join(excerpts_parts)
 
         prompt = SYNTH_PROMPT.format(topic=topic, excerpts=excerpts)
-        synthesis = self.llm.generate(prompt, system=SYNTH_SYSTEM, temperature=0.5)
+        synthesis = self.llm.generate(prompt, system=SYNTH_SYSTEM, temperature=self.temperature)
         return {
             "topic": topic,
             "synthesis": synthesis,

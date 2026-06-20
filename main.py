@@ -14,7 +14,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import pickle
 import re
 import shutil
@@ -22,7 +21,11 @@ import signal
 import sys
 import time
 from collections import deque
-from datetime import datetime
+from datetime import datetime, timezone
+
+# Python 3.13 deprecated datetime.utcnow(); use this helper everywhere.
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 from pathlib import Path
 from typing import Any
 
@@ -103,7 +106,7 @@ def update_prompt_md(
     text = re.sub(r"current_iteration:\s*\d+", f"current_iteration: {iteration}", text)
     text = re.sub(
         r"last_run_ts:\s*\S+",
-        f"last_run_ts: {datetime.utcnow().isoformat()}Z",
+        f"last_run_ts: {_utcnow().isoformat()}",
         text,
     )
     text = re.sub(r"last_run_status:\s*\S+", f"last_run_status: {status}", text)
@@ -111,7 +114,7 @@ def update_prompt_md(
     if learnings_to_append.strip():
         marker = "<!-- The agent appends concise lessons from each iteration below this line. -->"
         addition = (
-            f"\n\n### Iteration {iteration} ({datetime.utcnow().date()})\n"
+            f"\n\n### Iteration {iteration} ({_utcnow().date()})\n"
             f"{learnings_to_append.strip()}\n"
         )
         if marker in text:
@@ -229,7 +232,11 @@ class Orchestrator:
         self.arxiv = ArxivSearchTool(**t["arxiv"])
         self.pdf = PdfReaderTool(**t["pdf_reader"])
         self.memory = MemoryTool(self.llm, **t["memory"])
-        self.synth = SynthesizerTool(self.llm, self.memory)
+        self.synth = SynthesizerTool(
+            self.llm,
+            self.memory,
+            temperature=llm_cfg.get("temperature_synth", 0.5),
+        )
         self.wiki = WikipediaTool(**t["wikipedia"])
         self.fetch = WebFetchTool(**t["web_fetch"])
         self.ss = SemanticScholarTool(**t["semantic_scholar"])
@@ -269,7 +276,7 @@ class Orchestrator:
     # ----- logging -----
 
     def _log_event(self, event: dict[str, Any]) -> None:
-        event["ts"] = datetime.utcnow().isoformat()
+        event["ts"] = _utcnow().isoformat()
         with open(self.log_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(event, ensure_ascii=False) + "\n")
 
@@ -549,7 +556,7 @@ class Orchestrator:
         summary_path = iter_dir / "summary.md"
         summary = (
             f"# Iteration {state.iteration}\n\n"
-            f"- ts: {datetime.utcnow().isoformat()}Z\n"
+            f"- ts: {_utcnow().isoformat()}\n"
             f"- steps: {state.step}/{state.max_steps}\n"
             f"- elapsed_min: {state.elapsed_seconds()/60:.1f}\n"
             f"- done: {state.done}\n"
@@ -647,7 +654,7 @@ class Orchestrator:
             with open(self.final_output, "w", encoding="utf-8") as f:
                 f.write(f"# Research Output (iteration {state.iteration})\n\n")
                 f.write(f"**Goal:** {state.goal[:500]}\n\n")
-                f.write(f"**Started:** {datetime.utcnow().isoformat()}Z\n")
+                f.write(f"**Started:** {_utcnow().isoformat()}\n")
 
         try:
             while not state.out_of_budget() and not state.done and not self._shutdown:
@@ -688,7 +695,7 @@ class Orchestrator:
 
             with open(self.final_output, "a", encoding="utf-8") as f:
                 f.write(
-                    f"\n\n---\n_Run ended at {datetime.utcnow().isoformat()}Z "
+                    f"\n\n---\n_Run ended at {_utcnow().isoformat()} "
                     f"after {state.step} steps, "
                     f"{state.elapsed_seconds()/60:.1f} min. "
                     f"Reason: {self._shutdown_reason or ('done' if state.done else 'budget')}_\n"

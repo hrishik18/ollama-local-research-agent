@@ -18,7 +18,7 @@ import logging
 import shutil
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -26,7 +26,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 
 from llm import LLM
-from tools import DiskCache, SkillRegistry
+from tools import DiskCache, SkillRegistry, build_compressor
 
 console = Console()
 logging.basicConfig(
@@ -57,6 +57,13 @@ def evolve_prompt(config: dict) -> None:
     if config.get("cache", {}).get("enabled", True):
         cache = DiskCache(config["cache"]["dir"], config["cache"]["ttl_seconds"])
 
+    # Parity with main.py — use the same headroom-ai prompt compressor for
+    # the prompt-evolution call. Saves tokens on the long summary+output context.
+    default_clog = config.get("paths", {}).get(
+        "compression_log", "outputs/compression_log.jsonl"
+    )
+    compressor = build_compressor(config, default_log_path=default_clog)
+
     llm_cfg = config["llm"]
     llm = LLM(
         model=llm_cfg["model"],
@@ -66,6 +73,7 @@ def evolve_prompt(config: dict) -> None:
         max_tokens=llm_cfg["max_tokens"],
         keep_alive=llm_cfg.get("keep_alive", "30m"),
         cache=cache,
+        compressor=compressor,
     )
 
     if not llm.health_check():
@@ -78,6 +86,26 @@ def evolve_prompt(config: dict) -> None:
     last_summary = (last / "summary.md").read_text(encoding="utf-8") if (last / "summary.md").exists() else ""
     final_md = last / "final.md"
     output_preview = final_md.read_text(encoding="utf-8")[:2000] if final_md.exists() else ""
+
+    # v0.4+: include the deterministic scorecard so the LLM can see concrete
+    # numbers (composite score, deltas vs. previous iteration) when proposing
+    # prompt edits. Falls back silently for pre-v0.4 history dirs.
+    scorecard_path = last / "scorecard.json"
+    scorecard_summary = ""
+    if scorecard_path.exists():
+        try:
+            import json as _json
+            sc = _json.loads(scorecard_path.read_text(encoding="utf-8"))
+            composite = sc.get("composite_score") or sc.get("composite") or "?"
+            delta = sc.get("delta_vs_prev") or {}
+            scorecard_summary = (
+                f"\n\nLast iteration scorecard:\n"
+                f"  composite_score: {composite}/100\n"
+                f"  delta_vs_prev:   {delta}\n"
+            )
+            last_summary = (last_summary + scorecard_summary)[:3500]
+        except Exception as e:
+            log.debug("could not parse scorecard.json: %s", e)
 
     try:
         result = llm.generate_json(
@@ -106,7 +134,7 @@ def evolve_prompt(config: dict) -> None:
         text = prompt_file.read_text(encoding="utf-8")
         marker = "<!-- The agent appends concise lessons from each iteration below this line. -->"
         addition = (
-            f"\n\n### Auto-evolved {datetime.utcnow().date()}\n"
+            f"\n\n### Auto-evolved {datetime.now(timezone.utc).date()}\n"
             f"_Rationale: {rationale}_\n\n"
             + "\n".join(f"- {e}" for e in edits)
             + (f"\n\n{learnings}\n" if learnings else "\n")
