@@ -35,6 +35,7 @@ class LLM:
         max_tokens: int = 2048,
         keep_alive: str = "30m",
         cache=None,  # Optional DiskCache for response caching
+        compressor=None,  # Optional PromptCompressor (headroom-ai)
     ) -> None:
         self.model = model
         self.embed_model = embed_model
@@ -44,6 +45,7 @@ class LLM:
         self.max_tokens = max_tokens
         self.keep_alive = keep_alive
         self.cache = cache
+        self.compressor = compressor
 
     # ---------- generation ----------
 
@@ -60,6 +62,13 @@ class LLM:
         use_cache: bool = True,
     ) -> str:
         temp = temperature if temperature is not None else self.default_temperature
+
+        # Optional prompt compression (headroom-ai). Runs BEFORE cache key so
+        # the cache is keyed on what we actually send to Ollama — identical
+        # compressed prompts hit cache. JSON-mode is skipped inside compressor.
+        if self.compressor is not None:
+            system, prompt = self.compressor.compress(system, prompt, json_mode=json_mode)
+
         cache_payload = {
             "prompt": prompt,
             "system": system,

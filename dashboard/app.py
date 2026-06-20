@@ -252,6 +252,26 @@ def api_agent_log():
     return jsonify(_load_jsonl(OUTPUTS_DIR / "agent_log.jsonl", limit=300))
 
 
+@app.route("/api/compression")
+def api_compression():
+    """Headroom-ai compression savings (last 500 calls + aggregate)."""
+    rows = _load_jsonl(OUTPUTS_DIR / "compression_log.jsonl", limit=500)
+    tb = sum(int(r.get("tokens_before") or 0) for r in rows)
+    ta = sum(int(r.get("tokens_after") or 0) for r in rows)
+    saved = tb - ta
+    ratio = (saved / tb) if tb else 0.0
+    return jsonify(
+        {
+            "calls": len(rows),
+            "tokens_before": tb,
+            "tokens_after": ta,
+            "tokens_saved": saved,
+            "compression_ratio": round(ratio, 4),
+            "samples": rows[-50:],
+        }
+    )
+
+
 @app.route("/")
 def index():
     return render_template_string(INDEX_HTML, latest_final=latest_final())
@@ -433,6 +453,16 @@ INDEX_HTML = r"""<!doctype html>
     <div class="card col-6">
       <h2>🔬 Experiment notes</h2>
       <ul id="experiments" style="padding-left:1.2rem; margin:0;"></ul>
+    </div>
+
+    <!-- Headroom compression savings (optional; empty if compression disabled) -->
+    <div class="card col-12">
+      <h2>🗜️ Prompt compression (headroom-ai)</h2>
+      <div id="compression-summary" style="margin-bottom:.5rem; color:var(--muted);">
+        Enable in <code>config.yaml</code> → <code>compression.enabled: true</code>
+        and install <code>headroom-ai</code>.
+      </div>
+      <canvas id="chart-compression" height="80"></canvas>
     </div>
 
     <!-- Final preview -->
@@ -690,17 +720,47 @@ INDEX_HTML = r"""<!doctype html>
       document.getElementById('modal').style.display = 'block';
     }
 
+    async function loadCompression() {
+      const d = await J('/api/compression');
+      const sum = document.getElementById('compression-summary');
+      if (!d.calls) {
+        sum.innerHTML = 'No compression calls logged yet. Enable in <code>config.yaml</code> → '
+          + '<code>compression.enabled: true</code> and install <code>headroom-ai</code>.';
+        return;
+      }
+      const pct = (d.compression_ratio * 100).toFixed(1);
+      sum.innerHTML = `<b>${d.calls}</b> calls · <b>${d.tokens_before.toLocaleString()}</b> → `
+        + `<b>${d.tokens_after.toLocaleString()}</b> tokens · saved <b>${d.tokens_saved.toLocaleString()}</b> `
+        + `(<b>${pct}%</b>)`;
+      const labels = d.samples.map((_, i) => i + 1);
+      const before = d.samples.map(s => s.tokens_before || 0);
+      const after  = d.samples.map(s => s.tokens_after  || 0);
+      if (charts.compression) charts.compression.destroy();
+      charts.compression = new Chart(document.getElementById('chart-compression'), {
+        type: 'line',
+        data: { labels, datasets: [
+          { label: 'before', data: before, borderColor:'#888', tension:.2 },
+          { label: 'after',  data: after,  borderColor:'#3aa676', tension:.2, fill:true,
+            backgroundColor:'rgba(58,166,118,.15)' },
+        ]},
+        options: { responsive:true, plugins:{ legend:{ labels:{ color:'#aaa' }}},
+                   scales:{ x:{ ticks:{ color:'#aaa' }}, y:{ ticks:{ color:'#aaa' }}}}
+      });
+    }
+
     function loadAll() {
       loadScorecards();
       loadHeatmaps();
       loadMetrics();
       loadSkillsAndExperiments();
+      loadCompression();
       document.getElementById('final').innerHTML = marked.parse(FINAL_MD);
     }
 
     loadAll();
     setInterval(loadMetrics, 30000);
     setInterval(loadScorecards, 60000);
+    setInterval(loadCompression, 60000);
   </script>
 </body>
 </html>

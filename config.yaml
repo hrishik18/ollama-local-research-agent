@@ -11,6 +11,17 @@ llm:
   request_timeout: 600  # seconds; CPU inference can be slow
   keep_alive: "30m"  # keep model warm between calls — prevents 30s+ reloads
 
+compression:
+  # Optional prompt compression via headroom-ai (github.com/chopratejas/headroom).
+  # On a 4 GB Qwen CPU box, prompt tokens dominate wall-time — cutting them
+  # 50-90% on tool-heavy turns directly shortens every step.
+  # Install: pip install "headroom-ai[all]"
+  # If the package is missing this section is silently a no-op.
+  enabled: false
+  min_input_chars: 2000   # skip compression below this (overhead > savings)
+  model_hint: "gpt-4o"    # tokenizer headroom uses for counting (not for inference)
+  log_path: "outputs/compression_log.jsonl"
+
 cache:
   enabled: true
   dir: "cache"
@@ -84,3 +95,4 @@ paths:
   log_file: "outputs/agent_log.jsonl"
   final_output: "outputs/final.md"
   system_metrics_log: "outputs/system_metrics.jsonl"
+  compression_log: "outputs/compression_log.jsonl"

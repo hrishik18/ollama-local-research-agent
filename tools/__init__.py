@@ -17,6 +17,7 @@ from .chunker import chunk_text
 from .skills import SkillRegistry
 from .phoenix_tracer import maybe_setup_phoenix
 from .benchmark import score_iteration, score_all, write_scorecard, composite_score
+from .compressor import PromptCompressor, build_from_config as build_compressor
 
 __all__ = [
     "WebSearchTool",
@@ -39,4 +40,6 @@ __all__ = [
     "score_all",
     "write_scorecard",
     "composite_score",
+    "PromptCompressor",
+    "build_compressor",
 ]

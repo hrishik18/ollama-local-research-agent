@@ -47,6 +47,7 @@ from tools import (
     WebFetchTool,
     WebSearchTool,
     WikipediaTool,
+    build_compressor,
     maybe_setup_phoenix,
 )
 
@@ -201,6 +202,13 @@ class Orchestrator:
             )
         self.cache = cache
 
+        # Optional prompt compression (headroom-ai). No-op if not installed
+        # or if `compression.enabled: false` in config.yaml.
+        default_clog = config.get("paths", {}).get(
+            "compression_log", "outputs/compression_log.jsonl"
+        )
+        self.compressor = build_compressor(config, default_log_path=default_clog)
+
         # LLM
         llm_cfg = config["llm"]
         self.llm = LLM(
@@ -211,6 +219,7 @@ class Orchestrator:
             max_tokens=llm_cfg["max_tokens"],
             keep_alive=llm_cfg.get("keep_alive", "30m"),
             cache=cache,
+            compressor=self.compressor,
         )
 
         # Tools

@@ -217,6 +217,33 @@ The agent now auto-writes `history/iteration_NNN/scorecard.json` at the end of e
 python scripts/benchmark_iterations.py --print
 ```
 
+## Prompt compression (optional, recommended on 4 GB CPU)
+
+Qwen 1.5B on a 4 GB CPU laptop is wall-time-bound by prompt tokens — every
+input token is a forward pass before the first output token streams. On
+tool-output-heavy turns (search results, PDF chunks, agent_log digests),
+50-90% of those tokens are noise.
+
+[Headroom](https://github.com/chopratejas/headroom) compresses prompts
+locally before they reach Ollama, with zero external API calls. We integrate
+it as an optional, graceful-degrading layer in `LLM.generate`:
+
+```bash
+pip install "headroom-ai[all]"
+# config.yaml:
+#   compression:
+#     enabled: true
+#     min_input_chars: 2000
+#     model_hint: "gpt-4o"      # tokenizer for counting (not for inference)
+python main.py
+```
+
+- JSON-mode calls are skipped (compression can break strict JSON).
+- Short prompts (< `min_input_chars`) are skipped (overhead > savings).
+- If `headroom-ai` isn't installed, the compressor silently no-ops.
+- Per-call savings are written to `outputs/compression_log.jsonl` and shown
+  in the dashboard's "🗜️ Prompt compression" tile.
+
 ## Phoenix tracing (optional)
 
 To inspect every LLM prompt/response, latency, and token count in a web UI:
@@ -238,7 +265,9 @@ pytest tests/ -v
 ```
 
 10 smoke tests verify the chunker, cache, prompt.md parser, skills loader, system
-monitor, and config - all without needing Ollama.
+monitor, and config - all without needing Ollama. `tests/test_v04.py` and
+`tests/test_v05.py` add benchmark-scoring + dashboard + headroom-compression tests.
+37 tests total.
 
 ## License
 

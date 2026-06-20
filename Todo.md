@@ -56,4 +56,12 @@ Legend: `🔥` started · `⏳` next up · `💡` idea
 - `tools/notifier.py` — created, not yet hooked into `main.py`
 - `scripts/cleanup.py` — created, not yet documented in README
 
-Next session: finish wiring those two, then pick from Tier 1 (real Linux run + prompt templates).
+## Shipped this round
+
+- `tools/compressor.py` + headroom-ai integration in `LLM.generate` —
+  optional, graceful-degrading, JSON-mode-safe, logs to
+  `outputs/compression_log.jsonl`. Dashboard tile shows per-call savings.
+  Enable via `compression.enabled: true` in `config.yaml`.
+
+Next session: finish wiring notifier + cleanup, then pick from Tier 1
+(real Linux run + prompt templates).
