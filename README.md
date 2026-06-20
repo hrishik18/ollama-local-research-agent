@@ -22,7 +22,8 @@ and system monitoring (RAM + thermals).
 - **Speed**: Ollama `keep_alive` keeps model warm; disk cache deduplicates LLM/embedding calls
 - **Checkpoint & resume** - crashes don't lose progress
 - **Graceful shutdown** on SIGINT / SIGTERM / monitor abort
-- **Tested** - `pytest tests/` (27 smoke tests, no Ollama required)
+- **Prompt compression (optional)** - [headroom-ai](https://github.com/chopratejas/headroom) cuts input tokens 50-90% on tool-output-heavy turns; big speedup on slow CPU inference
+- **Tested** - `pytest tests/` (37 tests, no Ollama required)
 
 ## Architecture
 
@@ -44,6 +45,9 @@ main.py (ReAct orchestrator)
    |   |-- synthesizer.py       Multi-source synthesis
    |   |-- skills.py            Skill registry / runner
    |   |-- cache.py             Disk-backed response cache
+   |   |-- compressor.py        Optional headroom-ai prompt compression
+   |   |-- benchmark.py         Per-iteration deterministic scorecard
+   |   |-- notifier.py          ntfy.sh / notify-send / console alerts
    |   `-- system_monitor.py    RAM + thermal sampler + auto-abort
    |-- skills/                  Reusable prompt patterns (.md)
    |-- prompts/system.txt       Agent system prompt
@@ -84,6 +88,21 @@ pytest tests/ -v
 chmod +x dashboard/run.sh
 ./dashboard/run.sh                       # http://localhost:5050
 #   or: python scripts/seed_demo_history.py   # if you have no iterations yet
+```
+
+**Faster bootstrap on a fresh Linux/WSL box** — does everything in step 1-5 above
+in one idempotent script (apt deps + Ollama + model pull + venv + smoke tests):
+
+```bash
+bash scripts/wsl_setup.sh
+```
+
+**No Linux laptop handy?** Spin up a Standard_B2s Ubuntu VM (4 GB RAM, mimics
+the target) that runs the same bootstrap remotely:
+
+```bash
+./scripts/azure_vm_setup.sh             # provision + bootstrap
+./scripts/azure_vm_setup.sh --destroy   # tear down
 ```
 
 ## Usage
@@ -265,9 +284,9 @@ pytest tests/ -v
 ```
 
 10 smoke tests verify the chunker, cache, prompt.md parser, skills loader, system
-monitor, and config - all without needing Ollama. `tests/test_v04.py` and
-`tests/test_v05.py` add benchmark-scoring + dashboard + headroom-compression tests.
-37 tests total.
+monitor, and config - all without needing Ollama. `tests/test_v03.py`,
+`test_v04.py`, and `test_v05.py` add skills, benchmark-scoring, dashboard, and
+headroom-compression tests. **37 tests total, all pass without Ollama.**
 
 ## License
 
