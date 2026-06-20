@@ -47,6 +47,7 @@ from tools import (
     WebFetchTool,
     WebSearchTool,
     WikipediaTool,
+    BrowserTool,
     build_compressor,
     maybe_setup_phoenix,
 )
@@ -235,6 +236,7 @@ class Orchestrator:
         self.hn = HackerNewsTool(**t.get("hacker_news", {}))
         self.rss = RssTool(**t.get("rss", {}))
         self.gh = GithubSearchTool(**t.get("github_search", {}))
+        self.browser = BrowserTool(**t.get("browser", {}))
         self.skills = SkillRegistry(self.llm, skills_dir=config["paths"]["skills_dir"])
 
         # Optional tracing
@@ -411,6 +413,42 @@ class Orchestrator:
                         self.memory.add(chunk, meta={"source": url, "type": "web_page",
                                                      "title": r.get("title", "")})
                 return f"web_fetch stored content from {url}"
+
+            if tool_name == "browser":
+                # Browser-rendered fetch — use only when web_fetch fails on a
+                # JS-heavy page. Disabled by default; returns an error string
+                # the agent can read and fall back from.
+                url = args.get("url", "")
+                action = args.get("action", "fetch")
+                if action == "extract":
+                    r = self.browser.extract(url, args.get("css_selectors", ["body"]))
+                elif action == "screenshot":
+                    r = self.browser.screenshot(url, name=args.get("name"))
+                else:
+                    r = self.browser.fetch(url)
+                if r.get("error"):
+                    return f"browser {action} error for {url}: {r['error']}"
+                text = r.get("text", "")
+                if text:
+                    from tools.chunker import chunk_text
+                    for chunk in chunk_text(text, chunk_size=400, overlap=40):
+                        self.memory.add(
+                            chunk,
+                            meta={
+                                "source": url,
+                                "type": "browser_rendered",
+                                "title": r.get("title", ""),
+                            },
+                        )
+                    return (
+                        f"browser fetched {url} ({r.get('n_chars',0)} chars, "
+                        f"{r.get('elapsed_s','?')}s) → stored in memory"
+                    )
+                if r.get("extracted"):
+                    return f"browser extract from {url}: {r['extracted']}"
+                if r.get("screenshot"):
+                    return f"browser screenshot saved: {r['screenshot']}"
+                return f"browser {action} on {url}: no content"
 
             if tool_name == "hacker_news":
                 results = self.hn.run(args.get("query", ""), max_results=args.get("max_results"))

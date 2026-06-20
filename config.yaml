@@ -76,6 +76,19 @@ tools:
   github_search:
     max_results: 10
     rate_limit_seconds: 2.0
+  browser:
+    # Playwright headless Chromium. OFF by default — installs ~300MB browser
+    # binary and uses ~150MB RAM per call. ONLY use when web_fetch returns
+    # empty/JS-shell content. Install with:
+    #   pip install playwright && playwright install chromium
+    enabled: false
+    engine: "chromium"          # chromium | firefox | webkit
+    headless: true
+    nav_timeout_ms: 30000
+    wait_after_load_ms: 800     # wait for client-side hydration
+    max_chars: 20000
+    block_resources: true       # block images/fonts/css → faster, less RAM
+    screenshot_dir: "state/screenshots"
 
 tracing:
   enabled: false  # opt-in. Install: pip install arize-phoenix-otel openinference-instrumentation-ollama

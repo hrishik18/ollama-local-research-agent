@@ -14,8 +14,8 @@ and system monitoring (RAM + thermals).
 - **`history/` folder** - every iteration archived with summary + prompt + output
 - **Hybrid RAG retrieval** - FAISS (dense vectors) + BM25 (sparse keywords) re-ranked
 - **Smart chunking** - paragraph + sentence boundaries, not naive sliding windows
-- **11 tools**: web_search, arxiv, semantic_scholar, wikipedia, web_fetch, hacker_news, rss, github_search, pdf_reader, memory, synthesizer
-- **9 skills** in `skills/*.md` - reusable prompt patterns (editable, no code)
+- **11 tools**: web_search, arxiv, semantic_scholar, wikipedia, web_fetch, hacker_news, rss, github_search, pdf_reader, memory, synthesizer (+ optional `browser` via Playwright for JS-heavy pages)
+- **10 skills** in `skills/*.md` - reusable prompt patterns (editable, no code)
 - **Benchmark scoring** - every iteration auto-scored on 12+ metrics (composite 0-100) → `history/iteration_NNN/scorecard.json`. Tells you whether each iteration was actually better than the previous.
 - **Traceability dashboard** - `python dashboard/app.py` opens a Flask UI with composite-score trends, per-iteration scorecards, tool/skill × iteration heatmaps, drill-down step timelines, and live RAM/temp charts
 - **Optional Phoenix tracing** - opt-in OpenTelemetry export to a local [Arize Phoenix](https://github.com/Arize-ai/phoenix) instance for prompt-level observability
@@ -39,6 +39,7 @@ main.py (ReAct orchestrator)
    |   |-- semantic_scholar.py  Semantic Scholar (citations, TLDR, PDF URLs)
    |   |-- wikipedia.py         Wikipedia summaries
    |   |-- web_fetch.py         Generic web page extractor
+   |   |-- browser.py           Optional Playwright headless browser (JS pages)
    |   |-- pdf_reader.py        PyMuPDF download + chunk
    |   |-- chunker.py           Paragraph/sentence-aware chunker
    |   |-- memory.py            FAISS + BM25 hybrid retrieval
@@ -263,6 +264,37 @@ python main.py
 - Per-call savings are written to `outputs/compression_log.jsonl` and shown
   in the dashboard's "🗜️ Prompt compression" tile.
 
+## Browser automation (optional, Playwright)
+
+`web_fetch` uses requests+BeautifulSoup — fast, but blind to JavaScript.
+Modern SPA docs (React/Next/Vercel), dynamic dashboards, lazy-loaded pages,
+and Cloudflare-protected sites return empty bodies. The `browser` tool spins
+up a headless Chromium per call (Playwright) and returns the real rendered
+text — what a human in a browser actually sees.
+
+```bash
+pip install playwright
+playwright install chromium     # ~300 MB browser binary
+# config.yaml:
+#   tools:
+#     browser:
+#       enabled: true
+python main.py
+```
+
+The agent reaches for `browser(url=...)` only when `web_fetch` returned
+empty/JS-shell content. Each call is ~150 MB peak RAM and ~5-8 s overhead
+(images/fonts/CSS are blocked to keep it fast). The browser closes after
+every call — no long-lived context on the 4 GB box. Tune everything under
+`tools.browser.*` in `config.yaml`: `engine` (chromium/firefox/webkit),
+`nav_timeout_ms`, `wait_after_load_ms`, `block_resources`, `headless`.
+
+The `browser_automation.md` skill teaches the LLM *when* to reach for it
+vs. `web_fetch`, and what JSON to return after a successful render.
+
+If `playwright` isn't installed, the tool returns a clear error string the
+agent can fall back from — it never crashes the overnight run.
+
 ## Phoenix tracing (optional)
 
 To inspect every LLM prompt/response, latency, and token count in a web UI:
@@ -285,8 +317,9 @@ pytest tests/ -v
 
 10 smoke tests verify the chunker, cache, prompt.md parser, skills loader, system
 monitor, and config - all without needing Ollama. `tests/test_v03.py`,
-`test_v04.py`, and `test_v05.py` add skills, benchmark-scoring, dashboard, and
-headroom-compression tests. **37 tests total, all pass without Ollama.**
+`test_v04.py`, `test_v05.py`, and `test_v06.py` add skills, benchmark-scoring,
+dashboard, headroom-compression, and browser-tool tests.
+**44 tests total, all pass without Ollama or Playwright installed.**
 
 ## License
 

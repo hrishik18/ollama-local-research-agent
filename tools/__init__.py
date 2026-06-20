@@ -18,6 +18,7 @@ from .skills import SkillRegistry
 from .phoenix_tracer import maybe_setup_phoenix
 from .benchmark import score_iteration, score_all, write_scorecard, composite_score
 from .compressor import PromptCompressor, build_from_config as build_compressor
+from .browser import BrowserTool
 
 __all__ = [
     "WebSearchTool",
@@ -42,4 +43,5 @@ __all__ = [
     "composite_score",
     "PromptCompressor",
     "build_compressor",
+    "BrowserTool",
 ]

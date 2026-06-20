@@ -63,5 +63,11 @@ Legend: `🔥` started · `⏳` next up · `💡` idea
   `outputs/compression_log.jsonl`. Dashboard tile shows per-call savings.
   Enable via `compression.enabled: true` in `config.yaml`.
 
+- `tools/browser.py` + `skills/browser_automation.md` — Playwright headless
+  browser for JS-rendered pages (SPAs, Cloudflare-protected, lazy-loaded
+  content). OFF by default; graceful fallback if Playwright isn't installed.
+  Wired into the ReAct dispatcher as the `browser` tool. Enable via
+  `tools.browser.enabled: true` in `config.yaml`.
+
 Next session: finish wiring notifier + cleanup, then pick from Tier 1
 (real Linux run + prompt templates).

@@ -24,3 +24,9 @@ touching Python.
 - `evaluate_progress.md` — Self-evaluate whether the goal is being met
 - `improve_prompt.md` — Look at last iteration and propose an improved goal prompt
 - `summarize_chunks.md` — Condense N retrieved chunks into a tight bullet list
+- `critique_section.md` — Internal review of a draft section
+- `find_contradictions.md` — Surface conflicting claims across stored sources
+- `generate_search_queries.md` — Expand a topic into N diverse search queries
+- `score_iteration.md` — LLM-judge complement to the deterministic scorer
+- `browser_automation.md` — Decide whether to invoke the Playwright `browser` tool
+  and how to interpret its rendered output

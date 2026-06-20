@@ -12,7 +12,12 @@ Available tools:
 - arxiv_search(query): Find academic papers. Stores title+abstract in memory.
 - semantic_scholar(query): Find papers with citation counts and TLDRs. Often higher signal than arxiv.
 - wikipedia(title): Fetch a Wikipedia article summary by topic title.
-- web_fetch(url): Download and extract readable text from a web page.
+- web_fetch(url): Download and extract readable text from a web page (static HTML).
+- browser(url, action?, css_selectors?, name?): Headless browser fetch via Playwright.
+    Use ONLY when web_fetch returned empty/JS-shell content (SPA docs, lazy-loaded
+    pages, Cloudflare). 10x slower and ~150MB RAM per call. action defaults to
+    "fetch"; other actions: "extract" (needs css_selectors=[...]), "screenshot".
+    Disabled by default — falls back gracefully with a clear error message.
 - hacker_news(query, max_results?): Search Hacker News (Algolia). Good for engineering opinions, releases, and recent industry discussion.
 - rss(url, max_entries?): Fetch and parse an RSS/Atom feed (e.g. a blog or news feed).
 - github_search(query, max_results?): Find GitHub repositories. Returns stars, language, description. Use for finding implementations/tools.
@@ -23,7 +28,7 @@ Available tools:
 - use_skill(name, vars): Invoke a named reusable prompt. Skills:
     extract_paper_findings, compare_approaches, evaluate_progress,
     improve_prompt, summarize_chunks, critique_section, find_contradictions,
-    generate_search_queries.
+    generate_search_queries, browser_automation.
 - write_output(section_name, markdown): Append a section to the final output document.
 - reflect(): Force a self-reflection on progress; update internal plan.
 - done(): Signal the goal is met and finish.
