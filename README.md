@@ -15,13 +15,14 @@ and system monitoring (RAM + thermals).
 - **Hybrid RAG retrieval** - FAISS (dense vectors) + BM25 (sparse keywords) re-ranked
 - **Smart chunking** - paragraph + sentence boundaries, not naive sliding windows
 - **11 tools**: web_search, arxiv, semantic_scholar, wikipedia, web_fetch, hacker_news, rss, github_search, pdf_reader, memory, synthesizer
-- **8 skills** in `skills/*.md` - reusable prompt patterns (editable, no code)
-- **Dashboard** - `python dashboard/app.py` opens a Flask web UI showing iterations, tool usage, RAM/temperature charts, and rendered outputs
+- **9 skills** in `skills/*.md` - reusable prompt patterns (editable, no code)
+- **Benchmark scoring** - every iteration auto-scored on 12+ metrics (composite 0-100) → `history/iteration_NNN/scorecard.json`. Tells you whether each iteration was actually better than the previous.
+- **Traceability dashboard** - `python dashboard/app.py` opens a Flask UI with composite-score trends, per-iteration scorecards, tool/skill × iteration heatmaps, drill-down step timelines, and live RAM/temp charts
 - **Optional Phoenix tracing** - opt-in OpenTelemetry export to a local [Arize Phoenix](https://github.com/Arize-ai/phoenix) instance for prompt-level observability
 - **Speed**: Ollama `keep_alive` keeps model warm; disk cache deduplicates LLM/embedding calls
 - **Checkpoint & resume** - crashes don't lose progress
 - **Graceful shutdown** on SIGINT / SIGTERM / monitor abort
-- **Tested** - `pytest tests/` (21 smoke tests, no Ollama required)
+- **Tested** - `pytest tests/` (27 smoke tests, no Ollama required)
 
 ## Architecture
 
@@ -180,17 +181,36 @@ instead of the local Ollama loop, use the launcher scripts:
 
 ## Dashboard
 
-A lightweight Flask web UI to inspect runs visually:
+A Flask traceability dashboard that answers **"is iteration N better than N-1?"** with numbers:
 
 ```bash
 python dashboard/app.py
 # then open http://localhost:5050
 ```
 
-Shows: iterations table, tool-usage bar chart, RAM/CPU/thermal time series,
-skills catalogue, experiment notes (e.g. `history/experiment_*.md`), and the
-rendered Markdown of the latest `outputs/final.md`. Auto-refreshes system
-metrics every 30 seconds.
+No real iterations yet? Seed three demo iterations to see what it looks like:
+
+```bash
+python scripts/seed_demo_history.py --force
+```
+
+What it shows:
+
+- **Composite score** (0–100) per iteration, weighted across 9 deterministic metrics
+- **Iteration scorecards** — table with score, Δ vs previous, sections, unique sources, citations, tool/skill diversity, success ratio, steps, minutes, status
+- **Trend charts** — output growth (chars, citations, sections) and operational quality (tool diversity, skill diversity, success ratio) over time
+- **Tool × iteration heatmap** — which tool was called in which run, color-intensity by call count
+- **Skill × iteration heatmap** — same for skills
+- **Drill-down modal** — click any iteration row to see its full step-by-step timeline (every tool call, every skill invocation, every reflection — with thought, result snippet, and duration)
+- **Live RAM / CPU / thermal** time series (refreshes every 30 s)
+- **Skills catalogue** and **experiment notes**
+- **Latest final.md** rendered Markdown
+
+The agent now auto-writes `history/iteration_NNN/scorecard.json` at the end of every run (via `tools/benchmark.py`). To re-score existing runs after a code change:
+
+```bash
+python scripts/benchmark_iterations.py --print
+```
 
 ## Phoenix tracing (optional)
 

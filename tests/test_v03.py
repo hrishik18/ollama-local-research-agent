@@ -65,17 +65,17 @@ def test_dashboard_module_imports():
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     assert hasattr(mod, "app")
-    assert hasattr(mod, "list_iterations")
-    assert hasattr(mod, "load_system_metrics")
+    assert hasattr(mod, "list_scorecards")
+    assert hasattr(mod, "tool_heatmap")
 
 
 def test_dashboard_summary_parsing(tmp_path, monkeypatch):
+    """v0.4: scorecards endpoint replaces iterations."""
     import importlib.util
     spec = importlib.util.spec_from_file_location("dashboard_app", ROOT / "dashboard" / "app.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
 
-    # Create a fake iteration directory
     fake_history = tmp_path / "history"
     iter_dir = fake_history / "iteration_001"
     iter_dir.mkdir(parents=True)
@@ -85,20 +85,18 @@ def test_dashboard_summary_parsing(tmp_path, monkeypatch):
         "- elapsed_min: 5.3\n"
         '- tool_usage: {"web_search": 3, "memory_search": 2}\n'
         '- sections_written: ["intro", "findings"]\n'
-        "- shutdown_reason: done\n",
+        "- shutdown_reason: done\n"
+        "- done: True\n",
         encoding="utf-8",
     )
-    (iter_dir / "final.md").write_text("# Final\nHello", encoding="utf-8")
+    (iter_dir / "final.md").write_text("# Final\nHello [src1]", encoding="utf-8")
 
     monkeypatch.setattr(mod, "HISTORY_DIR", fake_history)
-    iters = mod.list_iterations()
-    assert len(iters) == 1
-    it = iters[0]
-    assert it["iteration"] == "iteration_001"
-    assert it["steps"] == 42
-    assert it["tool_usage"] == {"web_search": 3, "memory_search": 2}
-    assert it["sections_written"] == ["intro", "findings"]
-    assert it["has_final"] is True
+    monkeypatch.setattr(mod, "OUTPUTS_DIR", tmp_path / "outputs")
+    cards = mod.list_scorecards()
+    assert len(cards) == 1
+    assert cards[0]["iteration"] == "iteration_001"
+    assert "composite_score" in cards[0]
 
 
 def test_dashboard_metrics_parsing(tmp_path, monkeypatch):
@@ -119,7 +117,7 @@ def test_dashboard_metrics_parsing(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     monkeypatch.setattr(mod, "OUTPUTS_DIR", outputs)
-    rows = mod.load_system_metrics()
+    rows = mod._load_jsonl(outputs / "system_metrics.jsonl")
     assert len(rows) == 2
     assert rows[0]["ram_pct"] == 50.0
     assert rows[1]["max_temp_c"] == 62.0
@@ -131,8 +129,8 @@ def test_dashboard_routes_exist():
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     client = mod.app.test_client()
-    # All API routes should return 200 even when files are missing
-    for route in ("/api/iterations", "/api/system-metrics", "/api/agent-log",
+    for route in ("/api/scorecards", "/api/tool-heatmap", "/api/skill-heatmap",
+                  "/api/system-metrics", "/api/agent-log",
                   "/api/experiments", "/api/skills"):
         resp = client.get(route)
         assert resp.status_code == 200, f"{route} returned {resp.status_code}"

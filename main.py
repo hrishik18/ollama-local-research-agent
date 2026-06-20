@@ -527,6 +527,42 @@ class Orchestrator:
         # Copy prompt.md snapshot
         if Path(self.prompt_file).exists():
             shutil.copy(self.prompt_file, iter_dir / "prompt.md")
+
+        # Auto-score this iteration (deterministic, no LLM calls)
+        try:
+            from tools.benchmark import score_iteration, write_scorecard
+            log_path = Path(self.config["paths"]["log_file"])
+            # Load previous scorecard if any for delta computation
+            prev_sc = None
+            prior = sorted(
+                [d for d in self.history_dir.glob("iteration_*") if d.is_dir() and d != iter_dir],
+                key=lambda p: p.name,
+            )
+            if prior:
+                prev_path = prior[-1] / "scorecard.json"
+                if prev_path.exists():
+                    try:
+                        prev_sc = json.loads(prev_path.read_text(encoding="utf-8"))
+                    except Exception:
+                        prev_sc = None
+            scorecard = score_iteration(
+                iter_dir,
+                agent_log_path=log_path if log_path.exists() else None,
+                prev=prev_sc,
+            )
+            write_scorecard(iter_dir, scorecard)
+            log.info(
+                "[bold magenta]Scorecard:[/bold magenta] composite=%.1f  "
+                "sections=%d  unique_sources=%d  tools=%d  skills=%d",
+                scorecard["composite_score"],
+                scorecard["n_sections"],
+                scorecard["n_unique_sources"],
+                scorecard["tool_diversity"],
+                scorecard["skill_diversity"],
+            )
+        except Exception as e:
+            log.warning("Scoring failed: %s", e)
+
         return iter_dir
 
     # ----- main loop -----

@@ -16,6 +16,7 @@ from .cache import DiskCache
 from .chunker import chunk_text
 from .skills import SkillRegistry
 from .phoenix_tracer import maybe_setup_phoenix
+from .benchmark import score_iteration, score_all, write_scorecard, composite_score
 
 __all__ = [
     "WebSearchTool",
@@ -34,4 +35,8 @@ __all__ = [
     "chunk_text",
     "SkillRegistry",
     "maybe_setup_phoenix",
+    "score_iteration",
+    "score_all",
+    "write_scorecard",
+    "composite_score",
 ]
