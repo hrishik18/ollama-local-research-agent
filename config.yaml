@@ -1,8 +1,9 @@
 # Configuration for the autonomous research agent
 
 llm:
-  # Ollama model to use. Options: qwen2.5:1.5b (recommended for 4GB), qwen2.5:3b
-  model: "qwen2.5:1.5b"
+  # Ollama model to use. Options: qwen3:4b-instruct-2507-q4_K_M (current),
+  # qwen2.5:1.5b (lighter, ~1 GB VRAM), qwen2.5:3b
+  model: "qwen3:4b-instruct-2507-q4_K_M"
   embed_model: "nomic-embed-text"  # Lightweight embedding model (~270MB)
   host: "http://localhost:11434"
   temperature_plan: 0.2
