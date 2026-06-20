@@ -10,6 +10,9 @@ Legend: `🔥` started · `⏳` next up · `💡` idea
 ## Tier 1 — high value, low effort (do these next)
 
 - [ ] **Real end-to-end Linux run.** Pull the repo on the 4 GB laptop, run `main.py` against a real goal, watch for: Ollama OOM, JSON parse failures from Qwen, retry storms, thermal aborts. This is where every real bug lives.
+  - **Path A — WSL2 on Windows:** `wsl --install -d Ubuntu-22.04`, then `bash scripts/wsl_setup.sh`. Cap RAM via `%USERPROFILE%\.wslconfig`.
+  - **Path B — Azure VM:** `./scripts/azure_vm_setup.sh` (needs `az` CLI + subscription). `--destroy` to tear down.
+  - **Path C — actual target laptop:** `git pull && bash scripts/wsl_setup.sh` (script works on any Ubuntu/Debian, not just WSL). This is the only path that validates thermal-zone reads and `notify-send`.
 - [x] **Run-finished notifications.** `tools/notifier.py` shipped (ntfy.sh + `notify-send` + console fallback). _Still TODO:_ wire into `main.py` `finally` block + add `notifications:` section to `config.yaml`.
 - [x] **Disk rotation.** `scripts/cleanup.py` shipped (`--keep-last`, `--max-age-days`, `--pdf-age-days`, log rotation, dry-run by default). _Still TODO:_ add a cron / systemd-timer example to README.
 - [ ] **Prompt template library.** `prompts/templates/research_paper.md`, `competitive_analysis.md`, `tech_deep_dive.md`, `literature_review.md`. Plus a `scripts/use_template.py NAME` that copies the chosen template to `prompt.md`.
