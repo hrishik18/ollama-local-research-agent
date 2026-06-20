@@ -16,6 +16,18 @@ lxml>=5.0.0
 pytest>=8.0.0
 feedparser>=6.0.10
 flask>=3.0.0
+
+# ---------------------------------------------------------------------------
+# Reproducible installs:
+#   pip install -r requirements.lock.txt   # ← pinned versions (recommended)
+# Loose installs (latest compatible versions):
+#   pip install -r requirements.txt
+#
+# After editing this file, regenerate the lockfile:
+#   pip install pip-tools
+#   pip-compile --strip-extras --output-file=requirements.lock.txt requirements.txt
+# ---------------------------------------------------------------------------
+
 # Optional (uncomment to enable Phoenix tracing):
 # arize-phoenix-otel>=0.6.0
 # openinference-instrumentation-ollama>=0.1.0
