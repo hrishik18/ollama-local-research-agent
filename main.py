@@ -35,8 +35,11 @@ from prompts.templates import PLAN_PROMPT, REFLECT_PROMPT
 from tools import (
     ArxivSearchTool,
     DiskCache,
+    GithubSearchTool,
+    HackerNewsTool,
     MemoryTool,
     PdfReaderTool,
+    RssTool,
     SemanticScholarTool,
     SkillRegistry,
     SynthesizerTool,
@@ -44,6 +47,7 @@ from tools import (
     WebFetchTool,
     WebSearchTool,
     WikipediaTool,
+    maybe_setup_phoenix,
 )
 
 console = Console()
@@ -219,7 +223,13 @@ class Orchestrator:
         self.wiki = WikipediaTool(**t["wikipedia"])
         self.fetch = WebFetchTool(**t["web_fetch"])
         self.ss = SemanticScholarTool(**t["semantic_scholar"])
+        self.hn = HackerNewsTool(**t.get("hacker_news", {}))
+        self.rss = RssTool(**t.get("rss", {}))
+        self.gh = GithubSearchTool(**t.get("github_search", {}))
         self.skills = SkillRegistry(self.llm, skills_dir=config["paths"]["skills_dir"])
+
+        # Optional tracing
+        self.tracing_active = maybe_setup_phoenix(config)
 
         # Monitor
         self.monitor_cfg = config.get("monitor", {})
@@ -392,6 +402,39 @@ class Orchestrator:
                         self.memory.add(chunk, meta={"source": url, "type": "web_page",
                                                      "title": r.get("title", "")})
                 return f"web_fetch stored content from {url}"
+
+            if tool_name == "hacker_news":
+                results = self.hn.run(args.get("query", ""), max_results=args.get("max_results"))
+                for r in results:
+                    if r.get("title"):
+                        self.memory.add(
+                            f"{r['title']}\n{r.get('snippet','')}",
+                            meta={"source": r.get("url", ""), "type": "hacker_news",
+                                  "points": r.get("points", 0)},
+                        )
+                return f"hacker_news: {len(results)} stories for '{args.get('query','')}'"
+
+            if tool_name == "rss":
+                entries = self.rss.run(args.get("url", ""), max_entries=args.get("max_entries"))
+                for e in entries:
+                    if e.get("title"):
+                        self.memory.add(
+                            f"{e['title']}\n{e.get('summary','')}",
+                            meta={"source": e.get("url", ""), "type": "rss",
+                                  "feed": args.get("url", "")},
+                        )
+                return f"rss: stored {len(entries)} entries from {args.get('url','')}"
+
+            if tool_name == "github_search":
+                repos = self.gh.run(args.get("query", ""), max_results=args.get("max_results"))
+                for r in repos:
+                    self.memory.add(
+                        f"{r['full_name']}: {r.get('description','')} "
+                        f"(★{r.get('stars',0)}, {r.get('language','?')})",
+                        meta={"source": r.get("url", ""), "type": "github_repo",
+                              "stars": r.get("stars", 0)},
+                    )
+                return f"github_search: {len(repos)} repos for '{args.get('query','')}'"
 
             if tool_name == "pdf_reader":
                 url = args.get("url", "")

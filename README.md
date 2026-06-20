@@ -14,12 +14,14 @@ and system monitoring (RAM + thermals).
 - **`history/` folder** - every iteration archived with summary + prompt + output
 - **Hybrid RAG retrieval** - FAISS (dense vectors) + BM25 (sparse keywords) re-ranked
 - **Smart chunking** - paragraph + sentence boundaries, not naive sliding windows
-- **8 tools**: web_search, arxiv, semantic_scholar, wikipedia, web_fetch, pdf_reader, memory, synthesizer
-- **Skills system** - reusable prompt patterns in `skills/*.md` (editable, no code)
+- **11 tools**: web_search, arxiv, semantic_scholar, wikipedia, web_fetch, hacker_news, rss, github_search, pdf_reader, memory, synthesizer
+- **8 skills** in `skills/*.md` - reusable prompt patterns (editable, no code)
+- **Dashboard** - `python dashboard/app.py` opens a Flask web UI showing iterations, tool usage, RAM/temperature charts, and rendered outputs
+- **Optional Phoenix tracing** - opt-in OpenTelemetry export to a local [Arize Phoenix](https://github.com/Arize-ai/phoenix) instance for prompt-level observability
 - **Speed**: Ollama `keep_alive` keeps model warm; disk cache deduplicates LLM/embedding calls
 - **Checkpoint & resume** - crashes don't lose progress
 - **Graceful shutdown** on SIGINT / SIGTERM / monitor abort
-- **Tested** - `pytest tests/` (10 smoke tests, no Ollama required)
+- **Tested** - `pytest tests/` (21 smoke tests, no Ollama required)
 
 ## Architecture
 
@@ -175,6 +177,34 @@ instead of the local Ollama loop, use the launcher scripts:
 ./scripts/run_autopilot.sh prompts/example_goal.txt 300   # Linux
 .\scripts\run_autopilot.ps1 -PromptFile prompts\example_goal.txt -MaxContinues 300  # Windows
 ```
+
+## Dashboard
+
+A lightweight Flask web UI to inspect runs visually:
+
+```bash
+python dashboard/app.py
+# then open http://localhost:5050
+```
+
+Shows: iterations table, tool-usage bar chart, RAM/CPU/thermal time series,
+skills catalogue, experiment notes (e.g. `history/experiment_*.md`), and the
+rendered Markdown of the latest `outputs/final.md`. Auto-refreshes system
+metrics every 30 seconds.
+
+## Phoenix tracing (optional)
+
+To inspect every LLM prompt/response, latency, and token count in a web UI:
+
+```bash
+pip install arize-phoenix-otel openinference-instrumentation-ollama
+phoenix serve &
+# In config.yaml: tracing.enabled = true
+python main.py
+# open http://localhost:6006
+```
+
+If disabled or the packages aren't installed, this is a no-op.
 
 ## Testing
 

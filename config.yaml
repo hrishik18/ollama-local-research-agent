@@ -56,6 +56,24 @@ tools:
   semantic_scholar:
     max_results: 15
     rate_limit_seconds: 3
+  hacker_news:
+    max_results: 10
+    rate_limit_seconds: 1.0
+  rss:
+    max_entries: 15
+    timeout: 20
+  github_search:
+    max_results: 10
+    rate_limit_seconds: 2.0
+
+tracing:
+  enabled: false  # opt-in. Install: pip install arize-phoenix-otel openinference-instrumentation-ollama
+  endpoint: "http://localhost:6006/v1/traces"
+  project_name: "ollama-local-research-agent"
+
+dashboard:
+  port: 5050
+  host: "127.0.0.1"
 
 paths:
   state_dir: "state"

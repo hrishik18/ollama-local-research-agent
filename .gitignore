@@ -30,6 +30,7 @@ outputs/*
 !outputs/.gitkeep
 history/*
 !history/.gitkeep
+!history/experiment_*.md
 
 # Test artifacts
 .pytest_cache/

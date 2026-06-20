@@ -14,3 +14,8 @@ wikipedia-api>=0.6.0
 beautifulsoup4>=4.12.0
 lxml>=5.0.0
 pytest>=8.0.0
+feedparser>=6.0.10
+flask>=3.0.0
+# Optional (uncomment to enable Phoenix tracing):
+# arize-phoenix-otel>=0.6.0
+# openinference-instrumentation-ollama>=0.1.0
